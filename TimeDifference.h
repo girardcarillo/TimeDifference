@@ -9,6 +9,7 @@
 #include "bayeux/dpp/base_module.h"
 
 class TimeDifference : public dpp::base_module {
+
 public:
 
   //! Construct module
