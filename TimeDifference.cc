@@ -8,6 +8,7 @@
 #include <snemo/datamodels/data_model.h>
 #include <snemo/datamodels/topology_data.h>
 #include <mctools/simulated_data.h>
+#include <snemo/datamodels/topology_2e_pattern.h>
 
 #include <snemo/cuts/energy_measurement_cut.h>
 
@@ -34,8 +35,8 @@ TimeDifference::~TimeDifference() {
 
 // Initialize
 void TimeDifference::initialize(const datatools::properties& setup_,
-                          datatools::service_manager& /*flServices*/,
-                          dpp::module_handle_dict_type& /*moduleDict*/) {
+                                datatools::service_manager& /*flServices*/,
+                                dpp::module_handle_dict_type& /*moduleDict*/) {
   dpp::base_module::_common_initialize(setup_);
   this->_set_initialized(true);
 }
@@ -45,9 +46,8 @@ dpp::base_module::process_status
 TimeDifference::process(datatools::things& data_record_) {
   DT_THROW_IF(! is_initialized(), std::logic_error,
               "Module '" << get_name () << "' is not initialized !");
-  data_record_.tree_dump();
 
-  ////Defining labels
+  ////Defining data base labels
   //td_label
   //const std::string & td_label = snemo::datamodel::data_info::default_topology_data_label();
 
@@ -55,32 +55,31 @@ TimeDifference::process(datatools::things& data_record_) {
   const std::string & sd_label = snemo::datamodel::data_info::default_simulated_data_label();
 
   ////Storing data bases
-  //topology data base
-  if (data_record_.has("TD")) {
-    const snemo::datamodel::topology_data & a_td
-      =  data_record_.get<snemo::datamodel::topology_data>("TD");
-    a_td.tree_dump();
-  }
-  else {
-    DT_LOG_DEBUG(get_logging_priority(),"Data has no TD");
-  }
 
-  //simulated data base
-  if (data_record_.has(sd_label)) {
-    const mctools::simulated_data & a_sd
-      = data_record_.get<mctools::simulated_data>(sd_label);
-    a_sd.tree_dump();
-  }
-  else {
-    DT_LOG_DEBUG(get_logging_priority(),"Data has no SD");
-  }
+  //Topology data base
+  DT_THROW_IF(! data_record_.has("TD"), std::logic_error,
+              "Data has no TD !");
+  const snemo::datamodel::topology_data & a_td
+    =  data_record_.get<snemo::datamodel::topology_data>("TD");
+
+  //Simulated data base
+  DT_THROW_IF(! data_record_.has(sd_label), std::logic_error,
+              "Data has no SD !");
+  // const mctools::simulated_data & a_sd
+  //   = data_record_.get<mctools::simulated_data>(sd_label);
+  // a_sd.tree_dump();
 
   ////Applying cuts on data bases
   ///Cut on TD base
 
   //Energy cut
-
-
+  if (a_td.has_pattern_as<snemo::datamodel::topology_2e_pattern>()) {
+    const snemo::datamodel::topology_2e_pattern & a_2e_topology
+      = a_td.get_pattern_as<snemo::datamodel::topology_2e_pattern>();
+    const double & a_energy_sum
+      = a_2e_topology.get_electrons_energy_sum();
+    std::cout << "Energy sum " << a_energy_sum << std::endl;
+  }
 
   //Topology cut
 
