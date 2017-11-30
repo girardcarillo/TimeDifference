@@ -70,22 +70,18 @@ TimeDifference::process(datatools::things& data_record_) {
   // a_sd.tree_dump();
 
   ////Applying cuts on data bases
-  ///Cut on TD base
+  //Cut on TD base
+    if (a_td.has_pattern() && a_td.has_pattern_as<snemo::datamodel::topology_2e_pattern>()) {
+      const snemo::datamodel::topology_2e_pattern & a_2e_topology
+        = a_td.get_pattern_as<snemo::datamodel::topology_2e_pattern>();
+      const double & a_energy_sum
+        = a_2e_topology.get_electrons_energy_sum();
+      if (a_energy_sum/CLHEP::MeV >= 2.7 && a_energy_sum/CLHEP::MeV <= 3.2) {
+        std::cout << "Energy range" << std::endl;
+      }
+    }
 
-  //Energy cut
-  if (a_td.has_pattern_as<snemo::datamodel::topology_2e_pattern>()) {
-    const snemo::datamodel::topology_2e_pattern & a_2e_topology
-      = a_td.get_pattern_as<snemo::datamodel::topology_2e_pattern>();
-    const double & a_energy_sum
-      = a_2e_topology.get_electrons_energy_sum();
-    std::cout << "Energy sum " << a_energy_sum << std::endl;
-  }
-
-  //Topology cut
-
-  ///Cut on SD base
-
-  //Topology cut
+  //Cut on SD base
 
   // MUST return a status, see ref dpp::base_module::process_status
   return PROCESS_OK;
