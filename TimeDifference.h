@@ -6,6 +6,9 @@
 // Standard Library
 // Third Party
 // - Bayeux
+#include <TFile.h>
+#include <TTree.h>
+
 #include "bayeux/dpp/base_module.h"
 
 class TimeDifference : public dpp::base_module {
@@ -35,6 +38,15 @@ protected:
   void _set_defaults();
 
 private:
+
+  // The root output file:
+TFile * _sd_output_file_;
+std::string _output_file_name_;
+
+  // The root tree:
+  TTree * _sd_tree_;
+  double _time_;
+  double _energy_;
 
   // Macro which automatically creates the interface needed
   // to enable the module to be loaded at runtime
