@@ -48,6 +48,9 @@ std::string _output_file_name_;
   double _time_;
   double _energy_;
 
+  int _number_event_ = 0;
+  int _number_my_event_ = 0;
+
   // Macro which automatically creates the interface needed
   // to enable the module to be loaded at runtime
   DPP_MODULE_REGISTRATION_INTERFACE(TimeDifference)
