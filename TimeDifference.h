@@ -48,8 +48,12 @@ std::string _output_file_name_;
   double _time_;
   double _energy_;
 
+  std::string _particle_label_;
+  double _particle_time_;
   int _number_event_ = 0;
-  int _number_my_event_ = 0;
+  int _nb_internal_conversion_ = 0;
+  int _nb_other_process_ = 0;
+  int _nb_2e_topology_ = 0;
 
   // Macro which automatically creates the interface needed
   // to enable the module to be loaded at runtime

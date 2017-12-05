@@ -47,24 +47,29 @@ void TimeDifference::initialize(const datatools::properties& setup_,
   // std::cin >> _output_file_name_;
 }
 
+std::string const other_events("other_events.txt");
+std::ofstream other_events_flux(other_events.c_str());
+
+std::string const final_rate("final_rate.txt");
+std::ofstream final_flux(final_rate.c_str());
+
 // Process
 dpp::base_module::process_status
 TimeDifference::process(datatools::things& data_record_) {
   DT_THROW_IF(! is_initialized(), std::logic_error,
               "Module '" << get_name () << "' is not initialized !");
 
-
-
   ////Root export
   // std::stringstream ss;
   // ss.str("");
   // ss << "sd_" << _output_file_name_;
   // ss.str();
-  _sd_output_file_ = new TFile ("sd_tree", "recreate", "Output file of Simulation data");
+  _sd_output_file_ = new TFile ("sd_tree.root", "recreate", "Output file of Simulation data");
   _sd_output_file_->cd();
   _sd_tree_= new TTree("calorimeter_hit", "calorimeter_hit");
   _sd_tree_->Branch("time", &_time_,"time/D");
 
+  //Counting the number of simulated events
   _number_event_++;
 
   ////Defining data base labels
@@ -73,8 +78,6 @@ TimeDifference::process(datatools::things& data_record_) {
 
   //sd_label
   const std::string & sd_label = snemo::datamodel::data_info::default_simulated_data_label();
-
-
 
   ////Storing data bases
   //Topology data base
@@ -93,8 +96,6 @@ TimeDifference::process(datatools::things& data_record_) {
   const genbb::primary_event::particles_col_type & the_primary_particles
     = a_primary_event.get_particles();
 
-
-
   ////Applying cuts on data bases
   //Cut on TD base
   double my_energy_sum = 0;
@@ -104,6 +105,8 @@ TimeDifference::process(datatools::things& data_record_) {
     const double & a_energy_sum
       = a_2e_topology.get_electrons_energy_sum();
     if (a_energy_sum/CLHEP::MeV >= 2.7 && a_energy_sum/CLHEP::MeV <= 3.2) {
+      _nb_2e_topology_++;
+      std::cout << "2e topology = " << _nb_2e_topology_ << std::endl;
       my_energy_sum = a_energy_sum;
       // std::cout << "Cut on TD base OK" << std::endl;
     }
@@ -117,26 +120,51 @@ TimeDifference::process(datatools::things& data_record_) {
       nb_electron++;
       // std::cout << "Number of electron = " << nb_electron << std::endl;
     }
+
+    const std::string & a_particle_label
+      = iparticle.get_particle_label();
+    _particle_label_ = a_particle_label;
+    // std::cout << "Particle type = " << _particle_label_ << std::endl;
+    const double a_time
+      = iparticle.get_time();
+    _particle_time_ = a_time;
     if (nb_electron == 2) {
       // std::cout << "Cut on SD base OK" << std::endl;
-      const double a_time
-        = iparticle.get_time();
       a_time_difference = fabs(a_time_difference - a_time);
       // std::cout << "Time difference = " << a_time_difference/CLHEP::picosecond << " ps" << std::endl;
     }
   }
 
+  // std::cout << "Energy sum = " << my_energy_sum << std::endl;
 
   ////Storing data
-  if (my_energy_sum != 0 && a_time_difference != 0) {
-    _number_my_event_++;
-    _sd_output_file_->cd();
-    _time_= a_time_difference/CLHEP::picosecond;
-    _sd_tree_->Fill();
-    // std::cout << "Energy stored!" << std::endl;
-  }
+  if (my_energy_sum != 0) {
+    //Keep interesting events in a root tree
+    if (nb_electron == 2 && a_time_difference != 0) {
+      _nb_internal_conversion_++;
+      _sd_output_file_->cd();
+      _time_= a_time_difference/CLHEP::picosecond;
+      _sd_tree_->Fill();
+      // std::cout << "Energy stored!" << std::endl;
+    }
 
-  std::cout << "Probability " << (_number_my_event_/_number_event_)*100 << std::endl;
+    //Keep other events in a .txt file
+    if (nb_electron != 2) {
+      _nb_other_process_++;
+      DT_THROW_IF(! other_events_flux, std::logic_error,
+                  "ERROR: cannot open the other_events.txt file!");
+      other_events_flux << "Event # " << _number_event_-1 << std::endl;
+      other_events_flux << "Particle type = " << _particle_label_ << std::endl;
+      other_events_flux << "Event generation time = " << _particle_time_ << "\n" <<std::endl;
+    }
+  }
+  //Final rates stored in a .txt file
+  DT_THROW_IF(! final_flux, std::logic_error,
+              "ERROR: cannot open the final_rate.txt file!");
+  final_flux << "Event # " << _number_event_-1 << std::endl;
+  final_flux << "2e topology = " << (_nb_2e_topology_/_number_event_)*100 << "% : " << std::endl;
+  final_flux << "   -Internal conversion = " << (_nb_internal_conversion_/_number_event_)*100 << "%" << std::endl;
+  final_flux << "   -Other processes = " << (_nb_other_process_/_number_event_)*100 << "%" << std::endl;
 
   // MUST return a status, see ref dpp::base_module::process_status
   return PROCESS_OK;
@@ -144,6 +172,11 @@ TimeDifference::process(datatools::things& data_record_) {
 
 // Reset
 void TimeDifference::reset() {
+  // Root tree
+  _sd_output_file_->cd();
+  _sd_tree_->Write();
+  _sd_output_file_->Close();
+
   this->_set_initialized(false);
 }
 
