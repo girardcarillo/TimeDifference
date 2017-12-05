@@ -41,6 +41,17 @@ void TimeDifference::initialize(const datatools::properties& setup_,
                                 datatools::service_manager& /*flServices*/,
                                 dpp::module_handle_dict_type& /*moduleDict*/) {
   dpp::base_module::_common_initialize(setup_);
+
+  ////Root export
+  // std::stringstream ss;
+  // ss.str("");
+  // ss << "sd_" << _output_file_name_;
+  // ss.str();
+  _sd_output_file_ = new TFile ("sd_tree.root", "recreate", "Output file of Simulation data");
+  _sd_output_file_->cd();
+  _sd_tree_= new TTree("calorimeter_hit", "calorimeter_hit");
+  _sd_tree_->Branch("time", &_time_,"time/D");
+
   this->_set_initialized(true);
 
   // std::cout << "Enter output file name (ex.: flRec)" << std::endl;
@@ -59,18 +70,10 @@ TimeDifference::process(datatools::things& data_record_) {
   DT_THROW_IF(! is_initialized(), std::logic_error,
               "Module '" << get_name () << "' is not initialized !");
 
-  ////Root export
-  // std::stringstream ss;
-  // ss.str("");
-  // ss << "sd_" << _output_file_name_;
-  // ss.str();
-  _sd_output_file_ = new TFile ("sd_tree.root", "recreate", "Output file of Simulation data");
-  _sd_output_file_->cd();
-  _sd_tree_= new TTree("calorimeter_hit", "calorimeter_hit");
-  _sd_tree_->Branch("time", &_time_,"time/D");
 
   //Counting the number of simulated events
   _number_event_++;
+  // std::cout << "Number event = " << _number_event_ << std::endl;
 
   ////Defining data base labels
   //td_label
@@ -106,8 +109,8 @@ TimeDifference::process(datatools::things& data_record_) {
       = a_2e_topology.get_electrons_energy_sum();
     if (a_energy_sum/CLHEP::MeV >= 2.7 && a_energy_sum/CLHEP::MeV <= 3.2) {
       _nb_2e_topology_++;
-      std::cout << "2e topology = " << _nb_2e_topology_ << std::endl;
       my_energy_sum = a_energy_sum;
+      // std::cout << "2e topology = " << _nb_2e_topology_ << std::endl;
       // std::cout << "Cut on TD base OK" << std::endl;
     }
   }
@@ -138,14 +141,16 @@ TimeDifference::process(datatools::things& data_record_) {
   // std::cout << "Energy sum = " << my_energy_sum << std::endl;
 
   ////Storing data
-  if (my_energy_sum != 0) {
+  if (my_energy_sum != 0) {//Garantee we entered in the TD cut loop
     //Keep interesting events in a root tree
-    if (nb_electron == 2 && a_time_difference != 0) {
+    if (nb_electron == 2) {
       _nb_internal_conversion_++;
+      if (a_time_difference != 0) {
       _sd_output_file_->cd();
       _time_= a_time_difference/CLHEP::picosecond;
       _sd_tree_->Fill();
       // std::cout << "Energy stored!" << std::endl;
+      }
     }
 
     //Keep other events in a .txt file
@@ -158,13 +163,14 @@ TimeDifference::process(datatools::things& data_record_) {
       other_events_flux << "Event generation time = " << _particle_time_ << "\n" <<std::endl;
     }
   }
+
   //Final rates stored in a .txt file
   DT_THROW_IF(! final_flux, std::logic_error,
               "ERROR: cannot open the final_rate.txt file!");
   final_flux << "Event # " << _number_event_-1 << std::endl;
-  final_flux << "2e topology = " << (_nb_2e_topology_/_number_event_)*100 << "% : " << std::endl;
-  final_flux << "   -Internal conversion = " << (_nb_internal_conversion_/_number_event_)*100 << "%" << std::endl;
-  final_flux << "   -Other processes = " << (_nb_other_process_/_number_event_)*100 << "%" << std::endl;
+  final_flux << "2e topology = " << ((double)_nb_2e_topology_/(double)_number_event_)*100 << "% : " << std::endl;
+  final_flux << "   -Internal conversion = " << ((double)_nb_internal_conversion_/(double)_number_event_)*100 << "%" << std::endl;
+  final_flux << "   -Other processes = " << ((double)_nb_other_process_/(double)_number_event_)*100 << "%" << std::endl;
 
   // MUST return a status, see ref dpp::base_module::process_status
   return PROCESS_OK;
