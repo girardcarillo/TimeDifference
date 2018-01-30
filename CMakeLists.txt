@@ -4,11 +4,6 @@
 cmake_minimum_required(VERSION 3.3)
 project(TimeDifference)
 
-# Modules use Falaise, so we need to locate this or fail
-# Locating Falaise will automatically locate all of its
-# dependencies such as Bayeux, ROOT and Boost.
-find_package(Falaise REQUIRED)
-
 # Build a dynamic library from our sources
 add_library(TimeDifference SHARED TimeDifference.h TimeDifference.cc)
 
