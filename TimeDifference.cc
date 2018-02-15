@@ -128,7 +128,7 @@ TimeDifference::process(datatools::things& data_record_) {
     const std::string & a_particle_label
       = iparticle.get_particle_label();
     _particle_label_ = a_particle_label;
-    // std::cout << "Particle type = " << _particle_label_ << std::endl;
+    std::cout << "Particle type = " << _particle_label_ << std::endl;
     const double a_time
       = iparticle.get_time();
     _particle_time_ = a_time;
