@@ -102,6 +102,7 @@ TimeDifference::process(datatools::things& data_record_) {
   ////Applying cuts on data bases
   //Cut on TD base
   double my_energy_sum = 0;
+  // std::cout << my_energy_sum << std::endl;
   if (a_td.has_pattern() && a_td.has_pattern_as<snemo::datamodel::topology_2e_pattern>()) {
     const snemo::datamodel::topology_2e_pattern & a_2e_topology
       = a_td.get_pattern_as<snemo::datamodel::topology_2e_pattern>();
@@ -139,17 +140,16 @@ TimeDifference::process(datatools::things& data_record_) {
   }
 
   // std::cout << "Energy sum = " << my_energy_sum << std::endl;
-
   ////Storing data
   if (my_energy_sum != 0) {//Garantee we entered in the TD cut loop
     //Keep interesting events in a root tree
     if (nb_electron == 2) {
       _nb_internal_conversion_++;
       if (a_time_difference != 0) {
-      _sd_output_file_->cd();
-      _time_= a_time_difference/CLHEP::picosecond;
-      _sd_tree_->Fill();
-      // std::cout << "Energy stored!" << std::endl;
+        _sd_output_file_->cd();
+        _time_= a_time_difference/CLHEP::picosecond;
+        _sd_tree_->Fill();
+        std::cout << "Energy stored!" << std::endl;
       }
     }
 
@@ -161,6 +161,7 @@ TimeDifference::process(datatools::things& data_record_) {
       other_events_flux << "Event # " << _number_event_-1 << std::endl;
       other_events_flux << "Particle type = " << _particle_label_ << std::endl;
       other_events_flux << "Event generation time = " << _particle_time_ << "\n" <<std::endl;
+      // std::cout << "There is other events" << std::endl;
     }
   }
 
@@ -171,7 +172,7 @@ TimeDifference::process(datatools::things& data_record_) {
   final_flux << "2e topology = " << ((double)_nb_2e_topology_/(double)_number_event_)*100 << "% : " << std::endl;
   final_flux << "   -Internal conversion = " << ((double)_nb_internal_conversion_/(double)_number_event_)*100 << "%" << std::endl;
   final_flux << "   -Other processes = " << ((double)_nb_other_process_/(double)_number_event_)*100 << "%" << std::endl;
-
+  // std::cout << "Final flux" << std::endl;
   // MUST return a status, see ref dpp::base_module::process_status
   return PROCESS_OK;
 }
@@ -180,7 +181,8 @@ TimeDifference::process(datatools::things& data_record_) {
 void TimeDifference::reset() {
   // Root tree
   _sd_output_file_->cd();
-  _sd_tree_->Write();
+  // _sd_tree_->Write();
+  _sd_output_file_->Write();
   _sd_output_file_->Close();
 
   this->_set_initialized(false);
