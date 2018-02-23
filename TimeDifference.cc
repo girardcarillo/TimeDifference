@@ -8,6 +8,9 @@
 // #include <datatools/bit_mask.h>
 #include <snemo/datamodels/data_model.h>
 #include <snemo/datamodels/topology_data.h>
+#include <snemo/datamodels/particle_track_data.h>
+// #include <snemo/reconstruction/charged_particle_tracking_module.h>
+#include <snemo/reconstruction/tof_driver.h>
 #include <mctools/simulated_data.h>
 #include <snemo/datamodels/topology_2e_pattern.h>
 
@@ -51,7 +54,9 @@ void TimeDifference::initialize(const datatools::properties& setup_,
   _sd_output_file_->cd();
   _sd_tree_= new TTree("calorimeter_hit", "calorimeter_hit");
   _sd_tree_->Branch("time", &_time_,"time/D");
-
+  _sd_tree_->Branch("probability", &_internal_probability_,"probability/D");
+  _sd_tree_->Branch("length_Emin", &_length_Emin_,"length_Emin/D");
+  _sd_tree_->Branch("length_Emax", &_length_Emax_,"length_Emax/D");
   this->_set_initialized(true);
 
   // std::cout << "Enter output file name (ex.: flRec)" << std::endl;
@@ -69,7 +74,6 @@ dpp::base_module::process_status
 TimeDifference::process(datatools::things& data_record_) {
   DT_THROW_IF(! is_initialized(), std::logic_error,
               "Module '" << get_name () << "' is not initialized !");
-
 
   //Counting the number of simulated events
   _number_event_++;
@@ -89,6 +93,12 @@ TimeDifference::process(datatools::things& data_record_) {
   const snemo::datamodel::topology_data & a_td
     =  data_record_.get<snemo::datamodel::topology_data>("TD");
 
+  //Particle track data base
+  // DT_THROW_IF(! data_record_.has("PTD"), std::logic_error,
+  //             "Data has no PTD !");
+  // const snemo::datamodel::particle_track_data & a_ptd
+  //   =  data_record_.get<snemo::datamodel::particle_track_data>("PTD");
+
   //Simulated data base
   DT_THROW_IF(! data_record_.has(sd_label), std::logic_error,
               "Data has no SD !");
@@ -102,15 +112,48 @@ TimeDifference::process(datatools::things& data_record_) {
   ////Applying cuts on data bases
   //Cut on TD base
   double my_energy_sum = 0;
+  double my_internal_probability = 0;
+  double my_length_Emin = 0;
+  double my_length_Emax = 0;
   // std::cout << my_energy_sum << std::endl;
-  if (a_td.has_pattern() && a_td.has_pattern_as<snemo::datamodel::topology_2e_pattern>()) {
+  if (a_td.has_pattern()
+      && a_td.has_pattern_as<snemo::datamodel::topology_2e_pattern>()) {
     const snemo::datamodel::topology_2e_pattern & a_2e_topology
       = a_td.get_pattern_as<snemo::datamodel::topology_2e_pattern>();
     const double & a_energy_sum
       = a_2e_topology.get_electrons_energy_sum();
+    const double & a_internal_probability
+      = a_2e_topology.get_electrons_internal_probability();
+
+    double length_Emin = datatools::invalid_real();
+    if (a_td.get_pattern().get_particle_track(a_2e_topology.get_minimal_energy_electron_name()).has_trajectory()) {
+      const snemo::datamodel::tracker_trajectory & a_trajectory_min =
+        a_td.get_pattern().get_particle_track(a_2e_topology.get_minimal_energy_electron_name()).get_trajectory();
+      const snemo::datamodel::base_trajectory_pattern & a_track_pattern_min = a_trajectory_min.get_pattern();
+      length_Emin = a_track_pattern_min.get_shape().get_length();
+    }
+    else {
+      DT_THROW_IF(true,std::logic_error,"Electron of minimal energy has no attached trajectory !");
+    }
+
+    double length_Emax = datatools::invalid_real();
+    if (a_td.get_pattern().get_particle_track(a_2e_topology.get_maximal_energy_electron_name()).has_trajectory()) {
+      const snemo::datamodel::tracker_trajectory & a_trajectory_max =
+        a_td.get_pattern().get_particle_track(a_2e_topology.get_maximal_energy_electron_name()).get_trajectory();
+      const snemo::datamodel::base_trajectory_pattern & a_track_pattern_max = a_trajectory_max.get_pattern();
+      length_Emax = a_track_pattern_max.get_shape().get_length();
+    }
+    else {
+      DT_THROW_IF(true,std::logic_error,"Electron of minimal energy has no attached trajectory !");
+    }
+
     if (a_energy_sum/CLHEP::MeV >= 2.7 && a_energy_sum/CLHEP::MeV <= 3.2) {
       _nb_2e_topology_++;
       my_energy_sum = a_energy_sum;
+      my_internal_probability = a_internal_probability;
+      my_length_Emin = length_Emin;
+      my_length_Emax = length_Emax;
+      // std::cout << "Internal probability = " << my_internal_probability << std::endl;
       // std::cout << "2e topology = " << _nb_2e_topology_ << std::endl;
       // std::cout << "Cut on TD base OK" << std::endl;
     }
@@ -128,7 +171,7 @@ TimeDifference::process(datatools::things& data_record_) {
     const std::string & a_particle_label
       = iparticle.get_particle_label();
     _particle_label_ = a_particle_label;
-    std::cout << "Particle type = " << _particle_label_ << std::endl;
+    // std::cout << "Particle type = " << _particle_label_ << std::endl;
     const double a_time
       = iparticle.get_time();
     _particle_time_ = a_time;
@@ -141,15 +184,19 @@ TimeDifference::process(datatools::things& data_record_) {
 
   // std::cout << "Energy sum = " << my_energy_sum << std::endl;
   ////Storing data
-  if (my_energy_sum != 0) {//Garantee we entered in the TD cut loop
+  if (my_energy_sum != 0 && my_internal_probability != 0) {//Guarantee we entered in the TD cut loop
     //Keep interesting events in a root tree
     if (nb_electron == 2) {
       _nb_internal_conversion_++;
-      if (a_time_difference != 0) {
+      if (a_time_difference != 0) {// To remove if working with 0nubb simulations
         _sd_output_file_->cd();
         _time_= a_time_difference/CLHEP::picosecond;
+        _internal_probability_ = my_internal_probability;
+        _length_Emin_ = my_length_Emin;
+        _length_Emax_ = my_length_Emax;
         _sd_tree_->Fill();
-        std::cout << "Energy stored!" << std::endl;
+        // std::cout << "Internal probability = " << _internal_probability_ << std::endl;
+        // std::cout << "Energy sum = " << my_energy_sum << std::endl;
       }
     }
 
