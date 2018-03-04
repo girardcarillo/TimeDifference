@@ -57,6 +57,9 @@ void TimeDifference::initialize(const datatools::properties& setup_,
   _sd_tree_->Branch("probability", &_internal_probability_,"probability/D");
   _sd_tree_->Branch("length_Emin", &_length_Emin_,"length_Emin/D");
   _sd_tree_->Branch("length_Emax", &_length_Emax_,"length_Emax/D");
+  // _sd_tree_->Branch("Energy", &_energy_,"energy/D");
+  _sd_tree_->Branch("minimal_energy", &_minimal_energy_,"minimal_energy/D");
+  _sd_tree_->Branch("maximal_energy", &_maximal_energy_,"maximal_energy/D");
   this->_set_initialized(true);
 
   // std::cout << "Enter output file name (ex.: flRec)" << std::endl;
@@ -115,6 +118,9 @@ TimeDifference::process(datatools::things& data_record_) {
   double my_internal_probability = 0;
   double my_length_Emin = 0;
   double my_length_Emax = 0;
+  double my_minimal_energy = 0;
+  double my_maximal_energy = 0;
+  // double electron_mass_energy = 0.511;
   // std::cout << my_energy_sum << std::endl;
   if (a_td.has_pattern()
       && a_td.has_pattern_as<snemo::datamodel::topology_2e_pattern>()) {
@@ -122,6 +128,10 @@ TimeDifference::process(datatools::things& data_record_) {
       = a_td.get_pattern_as<snemo::datamodel::topology_2e_pattern>();
     const double & a_energy_sum
       = a_2e_topology.get_electrons_energy_sum();
+    const double & a_minimal_energy
+      = a_2e_topology.get_electron_minimal_energy();
+    const double & a_maximal_energy
+      = a_2e_topology.get_electron_maximal_energy();
     const double & a_internal_probability
       = a_2e_topology.get_electrons_internal_probability();
 
@@ -150,6 +160,8 @@ TimeDifference::process(datatools::things& data_record_) {
     if (a_energy_sum/CLHEP::MeV >= 2.7 && a_energy_sum/CLHEP::MeV <= 3.2) {
       _nb_2e_topology_++;
       my_energy_sum = a_energy_sum;
+      my_minimal_energy = a_minimal_energy;
+      my_maximal_energy = a_maximal_energy;
       my_internal_probability = a_internal_probability;
       my_length_Emin = length_Emin;
       my_length_Emax = length_Emax;
@@ -188,16 +200,19 @@ TimeDifference::process(datatools::things& data_record_) {
     //Keep interesting events in a root tree
     if (nb_electron == 2) {
       _nb_internal_conversion_++;
-      if (a_time_difference != 0) {// To remove if working with 0nubb simulations
-        _sd_output_file_->cd();
-        _time_= a_time_difference/CLHEP::picosecond;
-        _internal_probability_ = my_internal_probability;
-        _length_Emin_ = my_length_Emin;
-        _length_Emax_ = my_length_Emax;
-        _sd_tree_->Fill();
-        // std::cout << "Internal probability = " << _internal_probability_ << std::endl;
-        // std::cout << "Energy sum = " << my_energy_sum << std::endl;
-      }
+      // if (a_time_difference != 0) {// To remove if working with 0nubb simulations
+      _sd_output_file_->cd();
+      _time_= a_time_difference/CLHEP::picosecond;
+      _internal_probability_ = my_internal_probability;
+      _length_Emin_ = my_length_Emin;
+      _length_Emax_ = my_length_Emax;
+      _energy_ = my_energy_sum;
+      _minimal_energy_ = my_minimal_energy;
+      _maximal_energy_ = my_maximal_energy;
+      _sd_tree_->Fill();
+      // std::cout << "Internal probability = " << _internal_probability_ << std::endl;
+      // std::cout << "Energy sum = " << my_energy_sum << std::endl;
+      // }
     }
 
     //Keep other events in a .txt file
