@@ -47,6 +47,8 @@ std::string _output_file_name_;
   TTree * _sd_tree_;
   double _time_;
   double _energy_;
+  double _minimal_energy_;
+  double _maximal_energy_;
   double _internal_probability_;
   double _length_Emin_;
   double _length_Emax_;
