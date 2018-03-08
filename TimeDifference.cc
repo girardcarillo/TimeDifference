@@ -54,6 +54,7 @@ void TimeDifference::initialize(const datatools::properties& setup_,
   _sd_output_file_->cd();
   _sd_tree_= new TTree("calorimeter_hit", "calorimeter_hit");
   _sd_tree_->Branch("time", &_time_,"time/D");
+  _sd_tree_->Branch("time_difference_E", &_time_difference_E_,"time_difference_E/D");
   _sd_tree_->Branch("probability", &_internal_probability_,"probability/D");
   _sd_tree_->Branch("length_Emin", &_length_Emin_,"length_Emin/D");
   _sd_tree_->Branch("length_Emax", &_length_Emax_,"length_Emax/D");
@@ -236,46 +237,47 @@ TimeDifference::process(datatools::things& data_record_) {
 
   // std::cout << "Energy sum = " << my_energy_sum << std::endl;
   ////Storing data
-  if (my_energy_sum != 0 && my_internal_probability != 0) {//Guarantee we entered in the TD cut loop
-    //Keep interesting events in a root tree
-    if (nb_electron == 2) {
-      _nb_internal_conversion_++;
-      if (a_time_difference != 0) {// To remove if working with 0nubb simulations
-        _sd_output_file_->cd();
-        _time_= a_time_difference/CLHEP::picosecond;
-        _internal_probability_ = my_internal_probability;
-        _length_Emin_ = my_length_Emin;
-        _length_Emax_ = my_length_Emax;
-        _energy_ = my_energy_sum;
-        _minimal_energy_ = my_minimal_energy;
-        _maximal_energy_ = my_maximal_energy;
-        _time_Emin_ = my_time_Emin;
-        _time_Emax_ = my_time_Emax;
-        _sigma_time_Emin_ = my_sigma_time_Emin;
-        _sigma_time_Emax_ = my_sigma_time_Emax;
-        _sd_tree_->Fill();
-        // std::cout << "Internal probability = " << _internal_probability_ << std::endl;
-        // std::cout << "Energy sum = " << my_energy_sum << std::endl;
-        // std::cout << "Calo--minimal energy : " << my_minimal_energy_name << std::endl;
-        // std::cout << "Calo--maximal energy : " << my_maximal_energy_name << std::endl;
-        // std::cout << "Sigma time of e- of min energy = " << my_sigma_time_Emin << std::endl;
-        // std::cout << "sigma time of e- of max energy = " << my_sigma_time_Emax << std::endl;
-        // std::cout << "Time of e- of min energy = " << my_time_Emin << std::endl;
-        // std::cout << "Time of e- of max energy = " << my_time_Emax << std::endl;
-      }
-    }
+  // if (my_energy_sum != 0 && my_internal_probability != 0) {//Guarantee we entered in the TD cut loop
+  //Keep interesting events in a root tree
+  // if (nb_electron == 2) {
+  _nb_internal_conversion_++;
+  // if (a_time_difference != 0) {// To remove if working with 0nubb simulations
+  _sd_output_file_->cd();
+  _time_= a_time_difference/CLHEP::picosecond;
+  _internal_probability_ = my_internal_probability;
+  _length_Emin_ = my_length_Emin;
+  _length_Emax_ = my_length_Emax;
+  _energy_ = my_energy_sum;
+  _minimal_energy_ = my_minimal_energy;
+  _maximal_energy_ = my_maximal_energy;
+  _time_Emin_ = my_time_Emin;
+  _time_Emax_ = my_time_Emax;
+  _time_difference_E_ = fabs(my_time_Emax - my_time_Emin);
+  _sigma_time_Emin_ = my_sigma_time_Emin;
+  _sigma_time_Emax_ = my_sigma_time_Emax;
+  _sd_tree_->Fill();
+  // std::cout << "Internal probability = " << _internal_probability_ << std::endl;
+  // std::cout << "Energy sum = " << my_energy_sum << std::endl;
+  // std::cout << "Calo--minimal energy : " << my_minimal_energy_name << std::endl;
+  // std::cout << "Calo--maximal energy : " << my_maximal_energy_name << std::endl;
+  // std::cout << "Sigma time of e- of min energy = " << my_sigma_time_Emin << std::endl;
+  // std::cout << "sigma time of e- of max energy = " << my_sigma_time_Emax << std::endl;
+  // std::cout << "Time of e- of min energy = " << my_time_Emin << std::endl;
+  // std::cout << "Time of e- of max energy = " << my_time_Emax << std::endl;
+  // }
+  // }
 
-    //Keep other events in a .txt file
-    if (nb_electron != 2) {
-      _nb_other_process_++;
-      DT_THROW_IF(! other_events_flux, std::logic_error,
-                  "ERROR: cannot open the other_events.txt file!");
-      other_events_flux << "Event # " << _number_event_-1 << std::endl;
-      other_events_flux << "Particle type = " << _particle_label_ << std::endl;
-      other_events_flux << "Event generation time = " << _particle_time_ << "\n" <<std::endl;
-      // std::cout << "There is other events" << std::endl;
-    }
+  //Keep other events in a .txt file
+  if (nb_electron != 2) {
+    _nb_other_process_++;
+    DT_THROW_IF(! other_events_flux, std::logic_error,
+                "ERROR: cannot open the other_events.txt file!");
+    other_events_flux << "Event # " << _number_event_-1 << std::endl;
+    other_events_flux << "Particle type = " << _particle_label_ << std::endl;
+    other_events_flux << "Event generation time = " << _particle_time_ << "\n" <<std::endl;
+    // std::cout << "There is other events" << std::endl;
   }
+  // }
 
   //Final rates stored in a .txt file
   DT_THROW_IF(! final_flux, std::logic_error,

@@ -54,6 +54,7 @@ std::string _output_file_name_;
   double _length_Emax_;
   double _time_Emin_;
   double _time_Emax_;
+  double _time_difference_E_;
   double _sigma_time_Emin_;
   double _sigma_time_Emax_;
 
