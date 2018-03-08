@@ -238,33 +238,32 @@ TimeDifference::process(datatools::things& data_record_) {
   ////Storing data
   if (my_energy_sum != 0 && my_internal_probability != 0) {//Guarantee we entered in the TD cut loop
     //Keep interesting events in a root tree
-    // if (nb_electron == 2) {
-    _nb_internal_conversion_++;
-    // if (a_time_difference != 0) {// To remove if working with 0nubb simulations
-    _sd_output_file_->cd();
-    _time_= a_time_difference/CLHEP::picosecond;
-    _internal_probability_ = my_internal_probability;
-    _length_Emin_ = my_length_Emin;
-    _length_Emax_ = my_length_Emax;
-    _energy_ = my_energy_sum;
-    _minimal_energy_ = my_minimal_energy;
-    _maximal_energy_ = my_maximal_energy;
-    _time_Emin_ = my_time_Emin;
-    _time_Emax_ = my_time_Emax;
-    _sigma_time_Emin_ = my_sigma_time_Emin;
-    _sigma_time_Emax_ = my_sigma_time_Emax;
-    _sd_tree_->Fill();
-    // std::cout << "Internal probability = " << _internal_probability_ << std::endl;
-    // std::cout << "Energy sum = " << my_energy_sum << std::endl;
-    // std::cout << "Calo--minimal energy : " << my_minimal_energy_name << std::endl;
-    // std::cout << "Calo--maximal energy : " << my_maximal_energy_name << std::endl;
-    // std::cout << "Sigma time of e- of min energy = " << my_sigma_time_Emin << std::endl;
-    // std::cout << "sigma time of e- of max energy = " << my_sigma_time_Emax << std::endl;
-    // std::cout << "Time of e- of min energy = " << my_time_Emin << std::endl;
-    // std::cout << "Time of e- of max energy = " << my_time_Emax << std::endl
-      ;
-    // }
-    // }
+    if (nb_electron == 2) {
+      _nb_internal_conversion_++;
+      if (a_time_difference != 0) {// To remove if working with 0nubb simulations
+        _sd_output_file_->cd();
+        _time_= a_time_difference/CLHEP::picosecond;
+        _internal_probability_ = my_internal_probability;
+        _length_Emin_ = my_length_Emin;
+        _length_Emax_ = my_length_Emax;
+        _energy_ = my_energy_sum;
+        _minimal_energy_ = my_minimal_energy;
+        _maximal_energy_ = my_maximal_energy;
+        _time_Emin_ = my_time_Emin;
+        _time_Emax_ = my_time_Emax;
+        _sigma_time_Emin_ = my_sigma_time_Emin;
+        _sigma_time_Emax_ = my_sigma_time_Emax;
+        _sd_tree_->Fill();
+        // std::cout << "Internal probability = " << _internal_probability_ << std::endl;
+        // std::cout << "Energy sum = " << my_energy_sum << std::endl;
+        // std::cout << "Calo--minimal energy : " << my_minimal_energy_name << std::endl;
+        // std::cout << "Calo--maximal energy : " << my_maximal_energy_name << std::endl;
+        // std::cout << "Sigma time of e- of min energy = " << my_sigma_time_Emin << std::endl;
+        // std::cout << "sigma time of e- of max energy = " << my_sigma_time_Emax << std::endl;
+        // std::cout << "Time of e- of min energy = " << my_time_Emin << std::endl;
+        // std::cout << "Time of e- of max energy = " << my_time_Emax << std::endl;
+      }
+    }
 
     //Keep other events in a .txt file
     if (nb_electron != 2) {
