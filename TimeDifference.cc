@@ -60,6 +60,10 @@ void TimeDifference::initialize(const datatools::properties& setup_,
   // _sd_tree_->Branch("Energy", &_energy_,"energy/D");
   _sd_tree_->Branch("minimal_energy", &_minimal_energy_,"minimal_energy/D");
   _sd_tree_->Branch("maximal_energy", &_maximal_energy_,"maximal_energy/D");
+  _sd_tree_->Branch("time_Emin", &_time_Emin_,"time_Emin/D");
+  _sd_tree_->Branch("time_Emax", &_time_Emax_,"time_Emax/D");
+  _sd_tree_->Branch("sigma_time_Emin", &_sigma_time_Emin_,"sigma_time_Emin/D");
+  _sd_tree_->Branch("sigma_time_Emax", &_sigma_time_Emax_,"sigma_time_Emax/D");
   this->_set_initialized(true);
 
   // std::cout << "Enter output file name (ex.: flRec)" << std::endl;
@@ -120,6 +124,12 @@ TimeDifference::process(datatools::things& data_record_) {
   double my_length_Emax = 0;
   double my_minimal_energy = 0;
   double my_maximal_energy = 0;
+  std::string my_maximal_energy_name;
+  std::string my_minimal_energy_name;
+  double my_time_Emin = 0;
+  double my_time_Emax = 0;
+  double my_sigma_time_Emin = 0;
+  double my_sigma_time_Emax = 0;
   // double electron_mass_energy = 0.511;
   // std::cout << my_energy_sum << std::endl;
   if (a_td.has_pattern()
@@ -130,24 +140,48 @@ TimeDifference::process(datatools::things& data_record_) {
       = a_2e_topology.get_electrons_energy_sum();
     const double & a_minimal_energy
       = a_2e_topology.get_electron_minimal_energy();
+    const std::string & a_minimal_energy_name
+      = a_2e_topology.get_minimal_energy_electron_name();
+    const std::string & a_maximal_energy_name
+      = a_2e_topology.get_maximal_energy_electron_name();
     const double & a_maximal_energy
       = a_2e_topology.get_electron_maximal_energy();
     const double & a_internal_probability
       = a_2e_topology.get_electrons_internal_probability();
 
+    double time_Emin;
+    double time_Emax;
+    double sigma_time_Emin;
+    double sigma_time_Emax;
+    datatools::invalidate(time_Emin);
+    datatools::invalidate(time_Emax);
+    datatools::invalidate(sigma_time_Emin);
+    datatools::invalidate(sigma_time_Emax);
+    if (a_td.get_pattern().get_particle_track(a_minimal_energy_name).has_associated_calorimeter_hits()
+        && a_td.get_pattern().get_particle_track(a_maximal_energy_name).has_associated_calorimeter_hits()) {
+      const snemo::datamodel::calibrated_calorimeter_hit::collection_type & a_calorimeter_min =
+        a_td.get_pattern().get_particle_track(a_minimal_energy_name).get_associated_calorimeter_hits();
+      const snemo::datamodel::calibrated_calorimeter_hit & a_calo_hit_min = a_calorimeter_min.front().get();
+      const snemo::datamodel::calibrated_calorimeter_hit::collection_type & a_calorimeter_max =
+        a_td.get_pattern().get_particle_track(a_maximal_energy_name).get_associated_calorimeter_hits();
+      const snemo::datamodel::calibrated_calorimeter_hit & a_calo_hit_max = a_calorimeter_max.front().get();
+      time_Emin = a_calo_hit_min.get_time();
+      time_Emax = a_calo_hit_max.get_time();
+      sigma_time_Emin = a_calo_hit_min.get_sigma_time();
+      sigma_time_Emax = a_calo_hit_max.get_sigma_time();
+    }
+    else {
+      DT_THROW_IF(true,std::logic_error,"Particle track is not associated to any calorimeter block !");
+    }
+
     double length_Emin = datatools::invalid_real();
-    if (a_td.get_pattern().get_particle_track(a_2e_topology.get_minimal_energy_electron_name()).has_trajectory()) {
+    double length_Emax = datatools::invalid_real();
+    if (a_td.get_pattern().get_particle_track(a_2e_topology.get_minimal_energy_electron_name()).has_trajectory()
+        && a_td.get_pattern().get_particle_track(a_2e_topology.get_maximal_energy_electron_name()).has_trajectory()) {
       const snemo::datamodel::tracker_trajectory & a_trajectory_min =
         a_td.get_pattern().get_particle_track(a_2e_topology.get_minimal_energy_electron_name()).get_trajectory();
       const snemo::datamodel::base_trajectory_pattern & a_track_pattern_min = a_trajectory_min.get_pattern();
       length_Emin = a_track_pattern_min.get_shape().get_length();
-    }
-    else {
-      DT_THROW_IF(true,std::logic_error,"Electron of minimal energy has no attached trajectory !");
-    }
-
-    double length_Emax = datatools::invalid_real();
-    if (a_td.get_pattern().get_particle_track(a_2e_topology.get_maximal_energy_electron_name()).has_trajectory()) {
       const snemo::datamodel::tracker_trajectory & a_trajectory_max =
         a_td.get_pattern().get_particle_track(a_2e_topology.get_maximal_energy_electron_name()).get_trajectory();
       const snemo::datamodel::base_trajectory_pattern & a_track_pattern_max = a_trajectory_max.get_pattern();
@@ -162,9 +196,15 @@ TimeDifference::process(datatools::things& data_record_) {
       my_energy_sum = a_energy_sum;
       my_minimal_energy = a_minimal_energy;
       my_maximal_energy = a_maximal_energy;
+      my_minimal_energy_name = a_minimal_energy_name;
+      my_maximal_energy_name = a_maximal_energy_name;
       my_internal_probability = a_internal_probability;
       my_length_Emin = length_Emin;
       my_length_Emax = length_Emax;
+      my_time_Emin = time_Emin;
+      my_time_Emax = time_Emax;
+      my_sigma_time_Emin = sigma_time_Emin;
+      my_sigma_time_Emax = sigma_time_Emax;
       // std::cout << "Internal probability = " << my_internal_probability << std::endl;
       // std::cout << "2e topology = " << _nb_2e_topology_ << std::endl;
       // std::cout << "Cut on TD base OK" << std::endl;
@@ -198,22 +238,33 @@ TimeDifference::process(datatools::things& data_record_) {
   ////Storing data
   if (my_energy_sum != 0 && my_internal_probability != 0) {//Guarantee we entered in the TD cut loop
     //Keep interesting events in a root tree
-    if (nb_electron == 2) {
-      _nb_internal_conversion_++;
-      // if (a_time_difference != 0) {// To remove if working with 0nubb simulations
-      _sd_output_file_->cd();
-      _time_= a_time_difference/CLHEP::picosecond;
-      _internal_probability_ = my_internal_probability;
-      _length_Emin_ = my_length_Emin;
-      _length_Emax_ = my_length_Emax;
-      _energy_ = my_energy_sum;
-      _minimal_energy_ = my_minimal_energy;
-      _maximal_energy_ = my_maximal_energy;
-      _sd_tree_->Fill();
-      // std::cout << "Internal probability = " << _internal_probability_ << std::endl;
-      // std::cout << "Energy sum = " << my_energy_sum << std::endl;
-      // }
-    }
+    // if (nb_electron == 2) {
+    _nb_internal_conversion_++;
+    // if (a_time_difference != 0) {// To remove if working with 0nubb simulations
+    _sd_output_file_->cd();
+    _time_= a_time_difference/CLHEP::picosecond;
+    _internal_probability_ = my_internal_probability;
+    _length_Emin_ = my_length_Emin;
+    _length_Emax_ = my_length_Emax;
+    _energy_ = my_energy_sum;
+    _minimal_energy_ = my_minimal_energy;
+    _maximal_energy_ = my_maximal_energy;
+    _time_Emin_ = my_time_Emin;
+    _time_Emax_ = my_time_Emax;
+    _sigma_time_Emin_ = my_sigma_time_Emin;
+    _sigma_time_Emax_ = my_sigma_time_Emax;
+    _sd_tree_->Fill();
+    // std::cout << "Internal probability = " << _internal_probability_ << std::endl;
+    // std::cout << "Energy sum = " << my_energy_sum << std::endl;
+    // std::cout << "Calo--minimal energy : " << my_minimal_energy_name << std::endl;
+    // std::cout << "Calo--maximal energy : " << my_maximal_energy_name << std::endl;
+    // std::cout << "Sigma time of e- of min energy = " << my_sigma_time_Emin << std::endl;
+    // std::cout << "sigma time of e- of max energy = " << my_sigma_time_Emax << std::endl;
+    // std::cout << "Time of e- of min energy = " << my_time_Emin << std::endl;
+    // std::cout << "Time of e- of max energy = " << my_time_Emax << std::endl
+      ;
+    // }
+    // }
 
     //Keep other events in a .txt file
     if (nb_electron != 2) {
