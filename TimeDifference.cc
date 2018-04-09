@@ -117,8 +117,8 @@ TimeDifference::process(datatools::things& data_record_) {
   const genbb::primary_event::particles_col_type & the_primary_particles
     = a_primary_event.get_particles();
 
-  ////Applying cuts on data bases
-  //Cut on TD base
+  ////Applying cuts on data banks
+  //Cut on TD bank
   double my_energy_sum = 0;
   double my_internal_probability = 0;
   double my_length_Emin = 0;
@@ -206,13 +206,15 @@ TimeDifference::process(datatools::things& data_record_) {
       my_time_Emax = time_Emax;
       my_sigma_time_Emin = sigma_time_Emin;
       my_sigma_time_Emax = sigma_time_Emax;
+      // std::cout << "Energy sum with 2e_topology module = " << my_energy_sum << std::endl;
+      // std::cout << "Energy sum with Emin and Emax = " << a_maximal_energy + a_minimal_energy << std::endl;
       // std::cout << "Internal probability = " << my_internal_probability << std::endl;
       // std::cout << "2e topology = " << _nb_2e_topology_ << std::endl;
       // std::cout << "Cut on TD base OK" << std::endl;
     }
   }
 
-  //Cut on SD base
+  //Cut on SD bank
   int nb_electron = 0;
   double a_time_difference = 0;
   for (const auto & iparticle : the_primary_particles) {
@@ -245,16 +247,16 @@ TimeDifference::process(datatools::things& data_record_) {
         _sd_output_file_->cd();
         _time_= a_time_difference/CLHEP::picosecond;
         _internal_probability_ = my_internal_probability;
-        _length_Emin_ = my_length_Emin;
-        _length_Emax_ = my_length_Emax;
-        _energy_ = my_energy_sum;
-        _minimal_energy_ = my_minimal_energy;
-        _maximal_energy_ = my_maximal_energy;
-        _time_Emin_ = my_time_Emin;
-        _time_Emax_ = my_time_Emax;
-        _time_difference_E_ = fabs(my_time_Emax - my_time_Emin);
-        _sigma_time_Emin_ = my_sigma_time_Emin;
-        _sigma_time_Emax_ = my_sigma_time_Emax;
+        _length_Emin_ = my_length_Emin/CLHEP::centimeter;
+        _length_Emax_ = my_length_Emax/CLHEP::centimeter;
+        _energy_ = my_energy_sum/CLHEP::MeV;
+        _minimal_energy_ = my_minimal_energy/CLHEP::MeV;
+        _maximal_energy_ = my_maximal_energy/CLHEP::MeV;
+        _time_Emin_ = my_time_Emin/CLHEP::picosecond;
+        _time_Emax_ = my_time_Emax/CLHEP::picosecond;
+        _time_difference_E_ = fabs(my_time_Emax - my_time_Emin)/CLHEP::picosecond;
+        _sigma_time_Emin_ = my_sigma_time_Emin/CLHEP::picosecond;
+        _sigma_time_Emax_ = my_sigma_time_Emax/CLHEP::picosecond;
         _sd_tree_->Fill();
         // std::cout << "Internal probability = " << _internal_probability_ << std::endl;
         // std::cout << "Energy sum = " << my_energy_sum << std::endl;
