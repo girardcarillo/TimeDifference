@@ -46,10 +46,6 @@ void TimeDifference::initialize(const datatools::properties& setup_,
   dpp::base_module::_common_initialize(setup_);
 
   ////Root export
-  // std::stringstream ss;
-  // ss.str("");
-  // ss << "sd_" << _output_file_name_;
-  // ss.str();
   _sd_output_file_ = new TFile ("sd_tree.root", "recreate", "Output file of Simulation data");
   _sd_output_file_->cd();
   _sd_tree_= new TTree("calorimeter_hit", "calorimeter_hit");
@@ -58,17 +54,15 @@ void TimeDifference::initialize(const datatools::properties& setup_,
   _sd_tree_->Branch("probability", &_internal_probability_,"probability/D");
   _sd_tree_->Branch("length_Emin", &_length_Emin_,"length_Emin/D");
   _sd_tree_->Branch("length_Emax", &_length_Emax_,"length_Emax/D");
-  // _sd_tree_->Branch("Energy", &_energy_,"energy/D");
+  _sd_tree_->Branch("energy_sum", &_energy_,"energy/D");
   _sd_tree_->Branch("minimal_energy", &_minimal_energy_,"minimal_energy/D");
   _sd_tree_->Branch("maximal_energy", &_maximal_energy_,"maximal_energy/D");
   _sd_tree_->Branch("time_Emin", &_time_Emin_,"time_Emin/D");
   _sd_tree_->Branch("time_Emax", &_time_Emax_,"time_Emax/D");
   _sd_tree_->Branch("sigma_time_Emin", &_sigma_time_Emin_,"sigma_time_Emin/D");
   _sd_tree_->Branch("sigma_time_Emax", &_sigma_time_Emax_,"sigma_time_Emax/D");
-  this->_set_initialized(true);
 
-  // std::cout << "Enter output file name (ex.: flRec)" << std::endl;
-  // std::cin >> _output_file_name_;
+  this->_set_initialized(true);
 }
 
 std::string const other_events("other_events.txt");
@@ -99,7 +93,7 @@ TimeDifference::process(datatools::things& data_record_) {
   DT_THROW_IF(! data_record_.has("TD"), std::logic_error,
               "Data has no TD !");
   const snemo::datamodel::topology_data & a_td
-    =  data_record_.get<snemo::datamodel::topology_data>("TD");
+    = data_record_.get<snemo::datamodel::topology_data>("TD");
 
   //Particle track data base
   // DT_THROW_IF(! data_record_.has("PTD"), std::logic_error,
@@ -192,26 +186,21 @@ TimeDifference::process(datatools::things& data_record_) {
       DT_THROW_IF(true,std::logic_error,"Electron of minimal energy has no attached trajectory !");
     }
 
-    if (a_energy_sum/CLHEP::MeV >= 2.7 && a_energy_sum/CLHEP::MeV <= 3.2) {
-      _nb_2e_topology_++;
-      my_energy_sum = a_energy_sum;
-      my_minimal_energy = a_minimal_energy;
-      my_maximal_energy = a_maximal_energy;
-      my_minimal_energy_name = a_minimal_energy_name;
-      my_maximal_energy_name = a_maximal_energy_name;
-      my_internal_probability = a_internal_probability;
-      my_length_Emin = length_Emin;
-      my_length_Emax = length_Emax;
-      my_time_Emin = time_Emin;
-      my_time_Emax = time_Emax;
-      my_sigma_time_Emin = sigma_time_Emin;
-      my_sigma_time_Emax = sigma_time_Emax;
-      // std::cout << "Energy sum with 2e_topology module = " << my_energy_sum << std::endl;
-      // std::cout << "Energy sum with Emin and Emax = " << a_maximal_energy + a_minimal_energy << std::endl;
-      // std::cout << "Internal probability = " << my_internal_probability << std::endl;
-      // std::cout << "2e topology = " << _nb_2e_topology_ << std::endl;
-      // std::cout << "Cut on TD base OK" << std::endl;
-    }
+    // if (a_energy_sum/CLHEP::MeV >= 2.7 && a_energy_sum/CLHEP::MeV <= 3.2) {
+    _nb_2e_topology_++;
+    my_energy_sum = a_energy_sum;
+    my_minimal_energy = a_minimal_energy;
+    my_maximal_energy = a_maximal_energy;
+    my_minimal_energy_name = a_minimal_energy_name;
+    my_maximal_energy_name = a_maximal_energy_name;
+    my_internal_probability = a_internal_probability;
+    my_length_Emin = length_Emin;
+    my_length_Emax = length_Emax;
+    my_time_Emin = time_Emin;
+    my_time_Emax = time_Emax;
+    my_sigma_time_Emin = sigma_time_Emin;
+    my_sigma_time_Emax = sigma_time_Emax;
+    // }
   }
 
   //Cut on SD bank
@@ -220,20 +209,16 @@ TimeDifference::process(datatools::things& data_record_) {
   for (const auto & iparticle : the_primary_particles) {
     if (iparticle.is_electron()) {
       nb_electron++;
-      // std::cout << "Number of electron = " << nb_electron << std::endl;
     }
 
     const std::string & a_particle_label
       = iparticle.get_particle_label();
     _particle_label_ = a_particle_label;
-    // std::cout << "Particle type = " << _particle_label_ << std::endl;
     const double a_time
       = iparticle.get_time();
     _particle_time_ = a_time;
     if (nb_electron == 2) {
-      // std::cout << "Cut on SD base OK" << std::endl;
       a_time_difference = fabs(a_time_difference - a_time);
-      // std::cout << "Time difference = " << a_time_difference/CLHEP::picosecond << " ps" << std::endl;
     }
   }
 
@@ -241,33 +226,35 @@ TimeDifference::process(datatools::things& data_record_) {
   ////Storing data
   if (my_energy_sum != 0 && my_internal_probability != 0) {//Guarantee we entered in the TD cut loop
     //Keep interesting events in a root tree
-    if (nb_electron == 2) {
+    // if (nb_electron == 2) {
       _nb_internal_conversion_++;
-      if (a_time_difference != 0 && my_time_Emin != 0 && my_time_Emax != 0) {// To remove if working with 0nubb simulations
-        _sd_output_file_->cd();
-        _time_= a_time_difference/CLHEP::picosecond;
-        _internal_probability_ = my_internal_probability;
-        _length_Emin_ = my_length_Emin/CLHEP::centimeter;
-        _length_Emax_ = my_length_Emax/CLHEP::centimeter;
-        _energy_ = my_energy_sum/CLHEP::MeV;
-        _minimal_energy_ = my_minimal_energy/CLHEP::MeV;
-        _maximal_energy_ = my_maximal_energy/CLHEP::MeV;
-        _time_Emin_ = my_time_Emin/CLHEP::picosecond;
-        _time_Emax_ = my_time_Emax/CLHEP::picosecond;
-        _time_difference_E_ = fabs(my_time_Emax - my_time_Emin)/CLHEP::picosecond;
-        _sigma_time_Emin_ = my_sigma_time_Emin/CLHEP::picosecond;
-        _sigma_time_Emax_ = my_sigma_time_Emax/CLHEP::picosecond;
-        _sd_tree_->Fill();
-        // std::cout << "Internal probability = " << _internal_probability_ << std::endl;
-        // std::cout << "Energy sum = " << my_energy_sum << std::endl;
-        // std::cout << "Calo--minimal energy : " << my_minimal_energy_name << std::endl;
-        // std::cout << "Calo--maximal energy : " << my_maximal_energy_name << std::endl;
-        // std::cout << "Sigma time of e- of min energy = " << my_sigma_time_Emin << std::endl;
-        // std::cout << "sigma time of e- of max energy = " << my_sigma_time_Emax << std::endl;
-        // std::cout << "Time of e- of min energy = " << my_time_Emin << std::endl;
-        // std::cout << "Time of e- of max energy = " << my_time_Emax << std::endl;
-      }
-    }
+      // if (a_time_difference != 0 && my_time_Emin != 0 && my_time_Emax != 0) {// To remove if working with 0nubb simulations
+      _sd_output_file_->cd();
+      _time_= a_time_difference/CLHEP::nanosecond;
+      _internal_probability_ = my_internal_probability;
+      _length_Emin_ = my_length_Emin/CLHEP::millimeter;
+      _length_Emax_ = my_length_Emax/CLHEP::millimeter;
+      _energy_ = my_energy_sum/CLHEP::MeV;
+      _minimal_energy_ = my_minimal_energy/CLHEP::MeV;
+      _maximal_energy_ = my_maximal_energy/CLHEP::MeV;
+      _time_Emin_ = my_time_Emin/CLHEP::nanosecond;
+      _time_Emax_ = my_time_Emax/CLHEP::nanosecond;
+      _time_difference_E_ = fabs(my_time_Emax - my_time_Emin)/CLHEP::nanosecond;
+      _sigma_time_Emin_ = my_sigma_time_Emin/CLHEP::nanosecond;
+      _sigma_time_Emax_ = my_sigma_time_Emax/CLHEP::nanosecond;
+      _sd_tree_->Fill();
+      //}
+      // std::cout << "TD--internal probability = " << _internal_probability_ << std::endl;
+      // std::cout << "TD--LEmin = "  << _length_Emin_ << std::endl;
+      // std::cout << "TD--LEmax = "  << _length_Emax_ << std::endl;
+      // std::cout << "TD--Energy sum = "  << _energy_ << std::endl;
+      // std::cout << "TD--Emin = "  << _minimal_energy_ << std::endl;
+      // std::cout << "TD--Emax = "  << _maximal_energy_ << std::endl;
+      // std::cout << "TD--tEmin = "  << _time_Emin_ << std::endl;
+      // std::cout << "TD--tEmax = "  << _time_Emax_ << std::endl;
+      // std::cout << "TD--sigma_tEmin = "  << _sigma_time_Emin_ << std::endl;
+      // std::cout << "TD--sigma_tEmax = "  << _sigma_time_Emax_ << "\n" << std::endl;
+      // }
 
     //Keep other events in a .txt file
     if (nb_electron != 2) {
@@ -290,6 +277,8 @@ TimeDifference::process(datatools::things& data_record_) {
   final_flux << "   -Other processes = " << ((double)_nb_other_process_/(double)_number_event_)*100 << "%" << std::endl;
   // std::cout << "Final flux" << std::endl;
   // MUST return a status, see ref dpp::base_module::process_status
+
+
   return PROCESS_OK;
 }
 
