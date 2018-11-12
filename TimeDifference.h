@@ -64,6 +64,7 @@ std::string _output_file_name_;
   int _nb_internal_conversion_ = 0;
   int _nb_other_process_ = 0;
   int _nb_2e_topology_ = 0;
+  int _event_number_ = 0;
 
   // Macro which automatically creates the interface needed
   // to enable the module to be loaded at runtime

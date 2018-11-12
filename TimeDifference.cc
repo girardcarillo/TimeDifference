@@ -13,6 +13,7 @@
 #include <snemo/reconstruction/tof_driver.h>
 #include <mctools/simulated_data.h>
 #include <snemo/datamodels/topology_2e_pattern.h>
+#include <bayeux/datatools/event_id.h>
 
 // #include <sstream>
 
@@ -61,6 +62,7 @@ void TimeDifference::initialize(const datatools::properties& setup_,
   _sd_tree_->Branch("time_Emax", &_time_Emax_,"time_Emax/D");
   _sd_tree_->Branch("sigma_time_Emin", &_sigma_time_Emin_,"sigma_time_Emin/D");
   _sd_tree_->Branch("sigma_time_Emax", &_sigma_time_Emax_,"sigma_time_Emax/D");
+  _sd_tree_->Branch("event_number", &_event_number_,"event_number/I");
 
   this->_set_initialized(true);
 }
@@ -79,6 +81,7 @@ TimeDifference::process(datatools::things& data_record_) {
 
   //Counting the number of simulated events
   _number_event_++;
+
   // std::cout << "Number event = " << _number_event_ << std::endl;
 
   ////Defining data base labels
@@ -110,6 +113,8 @@ TimeDifference::process(datatools::things& data_record_) {
     = a_sd.get_primary_event();
   const genbb::primary_event::particles_col_type & the_primary_particles
     = a_primary_event.get_particles();
+  const datatools::event_id & a_event_id = datatools::event_id();
+  int a_event_number = a_event_id.get_event_number();
 
   ////Applying cuts on data banks
   //Cut on TD bank
@@ -200,6 +205,7 @@ TimeDifference::process(datatools::things& data_record_) {
     my_time_Emax = time_Emax;
     my_sigma_time_Emin = sigma_time_Emin;
     my_sigma_time_Emax = sigma_time_Emax;
+    _event_number_ = a_event_number;
     // }
   }
 
@@ -229,6 +235,7 @@ TimeDifference::process(datatools::things& data_record_) {
     // if (nb_electron == 2) {
       _nb_internal_conversion_++;
       // if (a_time_difference != 0 && my_time_Emin != 0 && my_time_Emax != 0) {// To remove if working with 0nubb simulations
+
       _sd_output_file_->cd();
       _time_= a_time_difference/CLHEP::nanosecond;
       _internal_probability_ = my_internal_probability;
@@ -243,6 +250,7 @@ TimeDifference::process(datatools::things& data_record_) {
       _sigma_time_Emin_ = my_sigma_time_Emin/CLHEP::nanosecond;
       _sigma_time_Emax_ = my_sigma_time_Emax/CLHEP::nanosecond;
       _sd_tree_->Fill();
+
       //}
       // std::cout << "TD--internal probability = " << _internal_probability_ << std::endl;
       // std::cout << "TD--LEmin = "  << _length_Emin_ << std::endl;
