@@ -4,12 +4,14 @@
 #ifndef TIMEDIFFERENCE_HH
 #define TIMEDIFFERENCE_HH
 // Standard Library
+#include <vector>
 // Third Party
 // - Bayeux
 #include <TFile.h>
 #include <TTree.h>
 
 #include "bayeux/dpp/base_module.h"
+#include <bayeux/geomtools/blur_spot.h>
 
 class TimeDifference : public dpp::base_module {
 
@@ -57,15 +59,20 @@ std::string _output_file_name_;
   double _time_difference_E_;
   double _sigma_time_Emin_;
   double _sigma_time_Emax_;
+  int _event_counter_;
+  int _event_counter_ytrue_;
 
   std::string _particle_label_;
   double _particle_time_;
   int _number_event_ = 0;
+  int _number_event_ytrue_ = 0;
   int _nb_internal_conversion_ = 0;
   int _nb_other_process_ = 0;
   int _nb_2e_topology_ = 0;
+  int _counter_test_ = 0;
   int _event_number_ = 0;
-
+   
+  geomtools::blur_spot _vertex_; 
   // Macro which automatically creates the interface needed
   // to enable the module to be loaded at runtime
   DPP_MODULE_REGISTRATION_INTERFACE(TimeDifference)
