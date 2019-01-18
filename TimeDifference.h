@@ -47,7 +47,7 @@ std::string _output_file_name_;
 
   // The root tree:
   TTree * _sd_tree_;
-  double _time_;
+  double _gen_time_;
   double _energy_;
   double _minimal_energy_;
   double _maximal_energy_;
@@ -63,7 +63,7 @@ std::string _output_file_name_;
   int _event_counter_ytrue_;
 
   std::string _particle_label_;
-  double _particle_time_;
+  double _gen_particle_time_;
   int _number_event_ = 0;
   int _number_event_ytrue_ = 0;
   int _nb_internal_conversion_ = 0;

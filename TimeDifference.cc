@@ -53,7 +53,7 @@ void TimeDifference::initialize(const datatools::properties& setup_,
   _sd_output_file_ = new TFile ("sd_tree.root", "recreate", "Output file of Simulation data");
   _sd_output_file_->cd();
   _sd_tree_= new TTree("calorimeter_hit", "calorimeter_hit");
-  _sd_tree_->Branch("time", &_time_,"time/D");
+  _sd_tree_->Branch("gen_time", &_gen_time_,"gen_time/D");
   _sd_tree_->Branch("event_counter", &_event_counter_,"event_counter/I");
   _sd_tree_->Branch("event_counter_ytrue", &_event_counter_ytrue_,"event_counter_ytrue/I");
   _sd_tree_->Branch("time_difference_E", &_time_difference_E_,"time_difference_E/D");
@@ -84,7 +84,7 @@ TimeDifference::process(datatools::things& data_record_) {
 
   //Counting the number of simulated events
   _number_event_++;
-
+  
   ////Storing data bases
   //Simulated data base
   const std::string & sd_label = snemo::datamodel::data_info::default_simulated_data_label();
@@ -92,6 +92,11 @@ TimeDifference::process(datatools::things& data_record_) {
               "Data has no SD !");
   const mctools::simulated_data &a_sd
     = data_record_.get<mctools::simulated_data>(sd_label);
+  const mctools::simulated_data::primary_event_type & a_primary_event
+    = a_sd.get_primary_event();
+  const genbb::primary_event::particles_col_type & the_primary_particles
+    = a_primary_event.get_particles();
+
 
   //Topology data base
   DT_THROW_IF(! data_record_.has("TD"), std::logic_error,
@@ -113,7 +118,7 @@ TimeDifference::process(datatools::things& data_record_) {
   const snemo::datamodel::particle_track_data::particle_collection_type & the_particles
      = a_ptd.get_particles();
 
-  std::cout << "nbr particles in PTD bank = " << the_particles.size() << std::endl;
+  // std::cout << "nbr particles in PTD bank = " << the_particles.size() << std::endl;
 
   if (abs(a_sd.get_vertex().y())<2371.5){
    _number_event_ytrue_++;
@@ -121,11 +126,11 @@ TimeDifference::process(datatools::things& data_record_) {
    for (unsigned part_i=0; part_i<the_particles.size(); part_i++){
     const snemo::datamodel::particle_track &part_track = a_ptd.get_particle(part_i);
     const snemo::datamodel::particle_track::vertex_collection_type &part_vertices = part_track.get_vertices();
-    std::cout << "nbr vertices per particle in PTD bank = " << part_vertices.size() << std::endl;
+    // std::cout << "nbr vertices per particle in PTD bank = " << part_vertices.size() << std::endl;
     for (unsigned vtx_i=0; vtx_i<part_vertices.size(); vtx_i++){
 
      if (snemo::datamodel::particle_track::vertex_is_on_source_foil(part_vertices[vtx_i].get())){
-     std::cout << "vertex on source foil !!" << std::endl;
+     // std::cout << "vertex on source foil !!" << std::endl;
      vertex_on_source_foil = true;
      // const geomtools::blur_spot &foil_vertex = part_vertices[vtx_i].get();
      // if (foil_vertex.get_position()[1] < 2371.5){
@@ -194,7 +199,7 @@ TimeDifference::process(datatools::things& data_record_) {
         const geomtools::geom_id &part_hit_geom_id_min = a_calorimeter_min[j].get().get_geom_id();
 
         const geomtools::geom_id &part_hit_geom_id_max = a_calorimeter_max[i].get().get_geom_id();
-
+        // std::cout << "geom id max = " << part_hit_geom_id_max << std::endl;
         if (part_hit_geom_id_min == part_hit_geom_id_max) {
           part_hits_are_on_same_calo = true;
         }
@@ -232,44 +237,61 @@ TimeDifference::process(datatools::things& data_record_) {
       DT_THROW_IF(true,std::logic_error,"Electron of minimal energy has no attached trajectory !");
     }
 
-    _nb_2e_topology_++;
-    my_energy_sum = a_energy_sum;
-    my_minimal_energy = a_minimal_energy;
-    my_maximal_energy = a_maximal_energy;
-    my_minimal_energy_name = a_minimal_energy_name;
-    my_maximal_energy_name = a_maximal_energy_name;
-    my_internal_probability = a_internal_probability;
-    my_length_Emin = length_Emin;
-    my_length_Emax = length_Emax;
-    my_time_Emin = time_Emin;
-    my_time_Emax = time_Emax;
-    my_sigma_time_Emin = sigma_time_Emin;
-    my_sigma_time_Emax = sigma_time_Emax;
+    //SD bank
+    int nb_gen_electron = 0;
+    double a_gen_time_difference = 0;
+    for (const auto & iparticle : the_primary_particles) {
 
+      if (iparticle.is_electron()) {
+	nb_gen_electron++;
+      }
 
-  ////Storing data
-  if (my_energy_sum != 0 && my_internal_probability != 0 && !part_hits_are_on_same_calo && vertex_on_source_foil && vertex_on_internal_pads_bulk && !hit_calo_double_count) {//Guarantee we entered in the TD cut loop
-    //Keep interesting events in a root tree
-    if (a_td.has_pattern_as<snemo::datamodel::topology_2e_pattern>()) {
-
-      _sd_output_file_->cd();
-      _event_counter_ = _number_event_-1;
-      _event_counter_ytrue_ = _number_event_ytrue_-1;
-      _internal_probability_ = my_internal_probability;
-      _length_Emin_ = my_length_Emin/CLHEP::millimeter;
-      _length_Emax_ = my_length_Emax/CLHEP::millimeter;
-      _energy_ = my_energy_sum/CLHEP::MeV;
-      _minimal_energy_ = my_minimal_energy/CLHEP::MeV;
-      _maximal_energy_ = my_maximal_energy/CLHEP::MeV;
-      _time_Emin_ = my_time_Emin/CLHEP::nanosecond;
-      _time_Emax_ = my_time_Emax/CLHEP::nanosecond;
-      _time_difference_E_ = fabs(my_time_Emax - my_time_Emin)/CLHEP::nanosecond;
-      _sigma_time_Emin_ = my_sigma_time_Emin/CLHEP::nanosecond;
-      _sigma_time_Emax_ = my_sigma_time_Emax/CLHEP::nanosecond;
-      _sd_tree_->Fill();
-
-
+      const double a_gen_time
+	= iparticle.get_time();
+      _gen_particle_time_ = a_gen_time;
+      if (nb_gen_electron == 2) {
+	a_gen_time_difference = fabs(a_gen_time_difference - a_gen_time);
+      }
     }
+
+
+    //if (a_energy_sum/CLHEP::MeV >= 2.7 && a_energy_sum/CLHEP::MeV <= 3.2) {  
+      _nb_2e_topology_++;
+      my_energy_sum = a_energy_sum;
+      my_minimal_energy = a_minimal_energy;
+      my_maximal_energy = a_maximal_energy;
+      my_minimal_energy_name = a_minimal_energy_name;
+      my_maximal_energy_name = a_maximal_energy_name;
+      my_internal_probability = a_internal_probability;
+      my_length_Emin = length_Emin;
+      my_length_Emax = length_Emax;
+      my_time_Emin = time_Emin;
+      my_time_Emax = time_Emax;
+      my_sigma_time_Emin = sigma_time_Emin;
+      my_sigma_time_Emax = sigma_time_Emax;
+    //}
+
+    ////Storing data
+    if (my_energy_sum != 0 && my_internal_probability != 0 && !part_hits_are_on_same_calo && vertex_on_source_foil && vertex_on_internal_pads_bulk && !hit_calo_double_count) {//Guarantee we entered in the TD cut loop
+      //Keep interesting events in a root tree
+      if (a_td.has_pattern_as<snemo::datamodel::topology_2e_pattern>()) {
+	_sd_output_file_->cd();
+	_gen_time_= a_gen_time_difference/CLHEP::nanosecond;
+	_event_counter_ = _number_event_-1;
+	_event_counter_ytrue_ = _number_event_ytrue_-1;
+	_internal_probability_ = my_internal_probability;
+	_length_Emin_ = my_length_Emin/CLHEP::millimeter;
+	_length_Emax_ = my_length_Emax/CLHEP::millimeter;
+	_energy_ = my_energy_sum/CLHEP::MeV;
+	_minimal_energy_ = my_minimal_energy/CLHEP::MeV;
+	_maximal_energy_ = my_maximal_energy/CLHEP::MeV;
+	_time_Emin_ = my_time_Emin/CLHEP::nanosecond;
+	_time_Emax_ = my_time_Emax/CLHEP::nanosecond;
+	_time_difference_E_ = fabs(my_time_Emax - my_time_Emin)/CLHEP::nanosecond;
+	_sigma_time_Emin_ = my_sigma_time_Emin/CLHEP::nanosecond;
+	_sigma_time_Emax_ = my_sigma_time_Emax/CLHEP::nanosecond;
+	_sd_tree_->Fill();
+      }
 
       DT_THROW_IF(! final_flux, std::logic_error,
               "ERROR: cannot open the final_rate.txt file!");
